@@ -44,6 +44,120 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  static const _positionChecks = [-9, -8, -7, -1, 1, 7, 8, 9];
+
+  String currentColor = 'black';
+  List<String> _spaceTypes = [];
+  List<Widget> _gameBoard = [];
+
+  _generateGameBoard(BuildContext context) {
+    var spaces = List.generate(64, (index) {
+      return (index == 19 || index == 26 || index == 37 || index == 44) ? _gameBoardSpace(context, 'highlight', index)
+          : (index == 28 || index == 35) ? _gameBoardSpace(context, 'black') 
+          : (index == 27 || index == 36) ? _gameBoardSpace(context, 'white')
+          : _gameBoardSpace(context);
+    });
+    
+    setState(() {
+      _gameBoard = spaces;
+    });
+  }
+
+  Widget _gameBoardSpace(BuildContext context, [String spaceType, int index]) {
+    setState(() {
+      _spaceTypes.add(spaceType);
+    });
+
+    return Container(
+      child: 
+        (spaceType == 'highlight') ? _highlightedButton(context, index)
+        : (spaceType == 'black') ? _blackToken() 
+        : (spaceType == 'white') ? _whiteToken()
+        : Container(),
+      decoration: BoxDecoration(
+          color: Colors.green,
+          border: Border.all(
+            width: 1,
+            color: Colors.white,
+          )
+        )
+    );
+  }
+
+  Widget _whiteToken() {
+    return FractionallySizedBox(
+      widthFactor: 0.75,
+      heightFactor: 0.75,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle
+        ),
+      ),
+    );
+  }
+
+  Widget _blackToken() {
+    return FractionallySizedBox(
+      widthFactor: 0.75,
+      heightFactor: 0.75,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          shape: BoxShape.circle
+        ),
+      ),
+    );
+  }
+  
+  Widget _highlightedButton(BuildContext context, int index) {
+    return FlatButton(
+      padding: EdgeInsets.all(0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.yellow[300].withOpacity(0.6),
+          border: Border.all(
+            width: 5, 
+            color: Colors.yellow[300]
+          )
+        ),  
+      ),
+      onPressed: () {
+        var gamePieces = new List<Widget>.from(_gameBoard);
+        gamePieces[index] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
+
+        for (int position in _positionChecks) {
+          if (index + position > -1 && index + position < 64) {
+            if (_spaceTypes[index + position] != currentColor && _spaceTypes[index + position] != 'highlight' && _spaceTypes[index + position] != null) {
+              var inline = -1;
+              var loopPosition = position;
+              while (index + loopPosition > -1 && index + loopPosition < 64) {
+                if (_spaceTypes[index + loopPosition] == currentColor) {
+                  inline = index + loopPosition; 
+                  break;
+                } else {
+                  loopPosition += loopPosition;
+                }
+              }
+
+              if (inline > -1) {
+                loopPosition = position;
+                while (index + loopPosition != inline) {
+                  gamePieces[index + loopPosition] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
+                  loopPosition += loopPosition;
+                }
+              }
+            }
+          }
+        }
+        
+        setState(() {
+          _gameBoard = gamePieces;
+          currentColor = currentColor == 'black' ? 'white' : 'black';
+        });
+      }
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +167,10 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
+    if (_gameBoard.length < 1) {
+      _generateGameBoard(context);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -61,55 +179,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: GridView.count(
             // Create a grid with 8 columns and 64 objects total.
             crossAxisCount: 8,
-            children: List.generate(64, (index) {
-              return Container(
-                // Hard coded the indices for the highlighting box and for the circles for example code.
-                // TODO: Split functionality, render highlighting buttons and game tiles dynamically.
-                child: (index == 20 || index == 29 || index == 34 || index == 43) ? FlatButton(
-                  padding: EdgeInsets.all(0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.yellow[300].withOpacity(0.6),
-                      border: Border.all(
-                        width: 5, 
-                        color: Colors.yellow[300]
-                      )
-                    ),  
-                  ),
-                  onPressed: () => {
-                    print('Pressed')
-                  }
-                ) 
-                : (index == 27 || index == 36) ? FractionallySizedBox(
-                  widthFactor: 0.75,
-                  heightFactor: 0.75,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      shape: BoxShape.circle
-                    ),
-                  ),
-                ) 
-                : (index == 28 || index == 35) ? FractionallySizedBox(
-                  widthFactor: 0.75,
-                  heightFactor: 0.75,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle
-                    ),
-                  ),
-                ) 
-                : Container(),
-                  decoration: BoxDecoration(
-                  color: Colors.green,
-                  border: Border.all(
-                    width: 1,
-                    color: Colors.white,
-                  )
-                ) 
-              );
-            }),
+            children: _gameBoard,
           )
       ),// This trailing comma makes auto-formatting nicer for build methods.
     );
