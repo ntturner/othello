@@ -109,6 +109,151 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+
+  _assignTokens(int index, List<String> newSpaceTypes, List<Widget> gamePieces) {
+    for (int position in _positionChecks) {
+      if (index + position > -1 && index + position < 64) {
+        if (newSpaceTypes[index + position] != currentColor && newSpaceTypes[index + position] != null) {
+          var inline = -1;
+          var loopPosition = position;
+          while (index + loopPosition > -1 && index + loopPosition < 64) {
+            if (newSpaceTypes[index + loopPosition] == currentColor) {
+              inline = index + loopPosition; 
+              break;
+            } else if (newSpaceTypes[index + loopPosition] == null) {
+              inline = -1;
+              break;
+            } else {
+              if ((index + loopPosition) % 8 == 0 || (index + loopPosition) % 8 == 7) {
+                if (position == -9 || position == -1 || position == 7 || position == 9 || position == 1 || position == -7) {
+                  inline = -1;
+                  break;
+                }
+              }
+              loopPosition += position;
+            }
+          }
+
+          if (inline > -1) {
+            loopPosition = position;
+            while (index + loopPosition != inline) {
+              // TODO: Investigate visual changes.
+              // AnimationController. Timer event, maybe 100 ms or something. Disable user interface.
+              // On the timer complete, call the set state.
+              gamePieces[index + loopPosition] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
+              newSpaceTypes[index + loopPosition] = currentColor == 'black' ? 'black' : 'white';
+              loopPosition += position;
+            }
+          }
+        }
+      }
+    }
+
+    return [newSpaceTypes, gamePieces];
+  }
+
+  _assignHighlight(List<String> newSpaceTypes, List<Widget> gamePieces, String newCurrentColor) {
+    for(int i = 0; i < newSpaceTypes.length; i++) {
+      if (newSpaceTypes[i] == newCurrentColor) {
+        for (int position in _positionChecks) {
+          if (i + position > -1 && i + position < 64) {
+            if (newSpaceTypes[i + position] != newCurrentColor && newSpaceTypes[i + position] != 'highlight' && newSpaceTypes[i + position] != null) {
+              var highlightIndex = -1;
+              var loopPosition = position;
+
+              while (i + loopPosition > -1 && i + loopPosition < 64) {
+                if (newSpaceTypes[i + loopPosition] == null) {
+                  highlightIndex = i + loopPosition; 
+                  break;
+                } else if (newSpaceTypes[i + loopPosition] == newCurrentColor || newSpaceTypes[i + loopPosition] == 'highlight') {
+                  highlightIndex = -1;
+                  break;
+                } else {
+                  if ((i + loopPosition) % 8 == 0 || (i + loopPosition) % 8 == 7) {
+                    if (position == 9 || position == 1 || position == -7 || position == -9 || position == -1 || position == 7) {
+                      highlightIndex = -1;
+                      break;
+                    }
+                  } 
+                  loopPosition += position;
+                }
+              }
+              
+              if (highlightIndex > -1) {
+                newSpaceTypes[highlightIndex] = 'highlight';
+                gamePieces[highlightIndex] = _gameBoardSpace(context, 'highlight', highlightIndex);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return [newSpaceTypes, gamePieces];
+  }
+
+  _highlightPress(BuildContext context, int index) {
+    // Update game piece widgets array as well as space type tracking array.
+    var gamePieces = List<Widget>.from(_gameBoard);
+    var newSpaceTypes = List<String>.from(_spaceTypes);
+    gamePieces[index] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
+    newSpaceTypes[index] = currentColor == 'black' ? 'black' : 'white';
+
+    for (int i = 0; i < newSpaceTypes.length; i++) {
+      if (newSpaceTypes[i] == 'highlight') {
+        newSpaceTypes[i] = null;
+        gamePieces[i] = _gameBoardSpace(context);
+      }
+    }
+
+    // Check the render queue. If it is not empty, check the timer. Lookup dart timer class, setTimeout.
+    var results = _assignTokens(index, newSpaceTypes, gamePieces);
+    newSpaceTypes = results[0];
+    gamePieces = results[1];
+
+    var newCurrentColor = currentColor == 'black' ? 'white' : 'black';
+    results = _assignHighlight(newSpaceTypes, gamePieces, newCurrentColor);
+    newSpaceTypes = results[0];
+    gamePieces = results[1];
+
+    bool noMove = true;
+    for (var space in newSpaceTypes) {
+      if (space == 'highlight') {
+        noMove = false;
+        break;
+      }
+    }
+
+    if(noMove == true) {
+      newCurrentColor = currentColor;
+      results = _assignHighlight(newSpaceTypes, gamePieces, newCurrentColor);
+      newSpaceTypes = results[0];
+      gamePieces = results[1];
+
+      for (var space in newSpaceTypes) {
+        if (space == 'highlight') {
+          noMove = false;
+          Scaffold.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No moves available for ' + newCurrentColor == 'black' ? 'white' : 'black' + '; ' + newCurrentColor + ' gets another turn.'),
+            )
+          );
+          break;
+        }
+      }
+    }
+    
+    // TODO: Await for set state, then run end game function.
+    setState(() {
+      _gameBoard = gamePieces;
+      _spaceTypes = newSpaceTypes;
+      currentColor = newCurrentColor;
+    });
+  }
+
+  _endGame() {
+
+  }
   
   Widget _highlightedButton(BuildContext context, int index) {
     return FlatButton(
@@ -122,51 +267,12 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ),  
       ),
-      onPressed: () {
-        var gamePieces = new List<Widget>.from(_gameBoard);
-        gamePieces[index] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
-
-        for (int position in _positionChecks) {
-          if (index + position > -1 && index + position < 64) {
-            if (_spaceTypes[index + position] != currentColor && _spaceTypes[index + position] != 'highlight' && _spaceTypes[index + position] != null) {
-              var inline = -1;
-              var loopPosition = position;
-              while (index + loopPosition > -1 && index + loopPosition < 64) {
-                if (_spaceTypes[index + loopPosition] == currentColor) {
-                  inline = index + loopPosition; 
-                  break;
-                } else {
-                  loopPosition += loopPosition;
-                }
-              }
-
-              if (inline > -1) {
-                loopPosition = position;
-                while (index + loopPosition != inline) {
-                  gamePieces[index + loopPosition] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
-                  loopPosition += loopPosition;
-                }
-              }
-            }
-          }
-        }
-        
-        setState(() {
-          _gameBoard = gamePieces;
-          currentColor = currentColor == 'black' ? 'white' : 'black';
-        });
-      }
+      onPressed: () => _highlightPress(context, index)
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     if (_gameBoard.length < 1) {
       _generateGameBoard(context);
     }
@@ -178,10 +284,12 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: GridView.count(
             // Create a grid with 8 columns and 64 objects total.
+            // TODO: Add preview widget (for current color).
+            // TODO: Add replay button.
             crossAxisCount: 8,
             children: _gameBoard,
           )
-      ),// This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
