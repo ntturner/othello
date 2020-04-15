@@ -7,7 +7,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Othello',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -18,15 +18,15 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        primaryColor: Colors.black,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: Othello(title: 'Othello'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+class Othello extends StatefulWidget {
+  Othello({Key key, this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -40,10 +40,10 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _OthelloState createState() => _OthelloState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _OthelloState extends State<Othello> {
   static const _positionChecks = [-9, -8, -7, -1, 1, 7, 8, 9];
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
@@ -246,7 +246,7 @@ class _MyHomePageState extends State<MyHomePage> {
           noMove = false;
           _scaffoldKey.currentState.showSnackBar(
             SnackBar(
-              content: Text(newCurrentColor == 'black' ? 'White' : 'Black' + ' cannot move! ' + newCurrentColor == 'black' ? 'Black' : 'White' + ' goes again.'),
+              content: Text((newCurrentColor == 'black' ? 'White' : 'Black') + ' cannot move! ' + (newCurrentColor == 'black' ? 'Black' : 'White') + ' goes again.'),
             )
           );
           break;
@@ -283,15 +283,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var winner = black > white ? 'Black' : white > black ? 'White' : 'Tie';
 
+    _resetDialog(context, winner != 'Tie' ? winner + ' wins!' : 'Tie game!', 'Would you like to play again?');
+  }
+  
+  _resetDialog(BuildContext context, String title, String body) {
     return showDialog<void>(
       context: context,
       barrierDismissible: true, // user must tap button!
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(winner != 'Tie' ? winner + ' wins!' : 'Tie game!'),
+          title: Text(title),
           content: SingleChildScrollView(
             child: Container(
-              child: Text('Would you like to play again?'),
+              child: Text(body),
             ),
           ),
           actions: <Widget>[
@@ -357,6 +361,14 @@ class _MyHomePageState extends State<MyHomePage> {
       key: _scaffoldKey,
       appBar: AppBar(
         title: Text(widget.title),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.autorenew),
+            onPressed: () {
+              _resetDialog(context, 'Reset game?', 'Current progress will be lost.');
+            }
+          )
+        ],
       ),
       body: Column(
         children: <Widget>[
