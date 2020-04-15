@@ -45,6 +45,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   static const _positionChecks = [-9, -8, -7, -1, 1, 7, 8, 9];
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
   String currentColor = 'black';
   List<String> _spaceTypes = [];
@@ -60,6 +61,16 @@ class _MyHomePageState extends State<MyHomePage> {
     
     setState(() {
       _gameBoard = spaces;
+    });
+  }
+
+  _resetGameBoard(BuildContext context) {
+    setState(() {
+      currentColor = 'black';
+      _spaceTypes = [];
+      _gameBoard = [];
+
+      _generateGameBoard(context);
     });
   }
 
@@ -233,9 +244,9 @@ class _MyHomePageState extends State<MyHomePage> {
       for (var space in newSpaceTypes) {
         if (space == 'highlight') {
           noMove = false;
-          Scaffold.of(context).showSnackBar(
+          _scaffoldKey.currentState.showSnackBar(
             SnackBar(
-              content: Text('No moves available for ' + newCurrentColor == 'black' ? 'white' : 'black' + '; ' + newCurrentColor + ' gets another turn.'),
+              content: Text(newCurrentColor == 'black' ? 'White' : 'Black' + ' cannot move! ' + newCurrentColor == 'black' ? 'Black' : 'White' + ' goes again.'),
             )
           );
           break;
@@ -244,15 +255,63 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     
     // TODO: Await for set state, then run end game function.
-    setState(() {
-      _gameBoard = gamePieces;
-      _spaceTypes = newSpaceTypes;
-      currentColor = newCurrentColor;
-    });
+    if(noMove == true) {
+      setState(() {
+        _gameBoard = gamePieces;
+        _endGame(context);
+      });
+    } else {
+      setState(() {
+        _gameBoard = gamePieces;
+        _spaceTypes = newSpaceTypes;
+        currentColor = newCurrentColor;        
+      });
+    }
   }
 
-  _endGame() {
+  _endGame(BuildContext context) {
+    var white = 0;
+    var black = 0;
 
+    for (var space in _spaceTypes) {
+      if (space == 'black') {
+        black++;
+      } else if (space == 'white') {
+        white++;
+      }
+    }
+
+    var winner = black > white ? 'Black' : white > black ? 'White' : 'Tie';
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(winner != 'Tie' ? winner + ' wins!' : 'Tie game!'),
+          content: SingleChildScrollView(
+            child: Container(
+              child: Text('Would you like to play again?'),
+            ),
+          ),
+          actions: <Widget>[
+            FlatButton(
+              child: Text('No'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            FlatButton(
+              child: Text('Yes'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _resetGameBoard(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
   
   Widget _highlightedButton(BuildContext context, int index) {
@@ -271,6 +330,23 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Widget _currentColorIndicator(BuildContext context) {
+    return Container(
+      child: 
+        (currentColor == 'black') ? _blackToken() 
+        : _whiteToken(),
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.green,
+        border: Border.all(
+          width: 1,
+          color: Colors.white,
+        )
+      )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_gameBoard.length < 1) {
@@ -278,18 +354,42 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Center(
-        child: GridView.count(
-            // Create a grid with 8 columns and 64 objects total.
-            // TODO: Add preview widget (for current color).
-            // TODO: Add replay button.
-            crossAxisCount: 8,
-            children: _gameBoard,
+      body: Column(
+        children: <Widget>[
+          Center(
+            child: GridView.count(
+                // Create a grid with 8 columns and 64 objects total.
+                // TODO: Add preview widget (for current color).
+                // TODO: Add replay button.
+                shrinkWrap: true,
+                crossAxisCount: 8,
+                children: _gameBoard,
+              )
+          ),
+          Center(
+            child: Container(
+              padding: EdgeInsets.only(top: 20.0),
+              child: Text(
+                'Current piece: ', 
+                style: TextStyle(
+                  fontSize: 28, 
+                  fontWeight: FontWeight.bold
+                )
+              ),
+            ),
+          ),
+          Center(
+            child: Container(
+              padding: EdgeInsets.only(top: 5.0),
+              child: _currentColorIndicator(context),
+            )
           )
-      ),
+        ],
+      )
     );
   }
 }
