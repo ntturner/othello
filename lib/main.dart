@@ -153,11 +153,9 @@ class _OthelloState extends State<Othello> {
           if (inline > -1) {
             loopPosition = position;
             while (index + loopPosition != inline) {
-              // TODO: Investigate visual changes.
-              // AnimationController. Timer event, maybe 100 ms or something. Disable user interface.
-              // On the timer complete, call the set state.
               gamePieces[index + loopPosition] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
               newSpaceTypes[index + loopPosition] = currentColor == 'black' ? 'black' : 'white';
+              // This will be used to run the timer.
               positionsToFlip.add(index + loopPosition);
               loopPosition += position;
             }
@@ -232,12 +230,12 @@ class _OthelloState extends State<Othello> {
       }
     }
 
+    // Update game board to set initial piece and remove highlight buttons.
     var updateGameBoard = List<Widget>.from(gamePieces);
     setState(() {
       _gameBoard = updateGameBoard;
     });
 
-    // Check the render queue. If it is not empty, check the timer. Lookup dart timer class, setTimeout.
     newSpaceTypes = _assignTokens(index, newSpaceTypes, gamePieces);
 
     var newCurrentColor = currentColor == 'black' ? 'white' : 'black';
