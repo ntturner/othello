@@ -254,7 +254,6 @@ class _OthelloState extends State<Othello> {
       }
     }
     
-    // TODO: Await for set state, then run end game function.
     if(noMove == true) {
       setState(() {
         _gameBoard = gamePieces;
@@ -375,8 +374,6 @@ class _OthelloState extends State<Othello> {
           Center(
             child: GridView.count(
                 // Create a grid with 8 columns and 64 objects total.
-                // TODO: Add preview widget (for current color).
-                // TODO: Add replay button.
                 shrinkWrap: true,
                 crossAxisCount: 8,
                 children: _gameBoard,
