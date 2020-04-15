@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
@@ -50,6 +52,8 @@ class _OthelloState extends State<Othello> {
   String currentColor = 'black';
   List<String> _spaceTypes = [];
   List<Widget> _gameBoard = [];
+  List<int> _positionsToFlip = [];
+  List<Widget> _renderArray = [];
 
   _generateGameBoard(BuildContext context) {
     var spaces = List.generate(64, (index) {
@@ -122,6 +126,7 @@ class _OthelloState extends State<Othello> {
   }
 
   _assignTokens(int index, List<String> newSpaceTypes, List<Widget> gamePieces) {
+    List<int> positionsToFlip = [];
     for (int position in _positionChecks) {
       if (index + position > -1 && index + position < 64) {
         if (newSpaceTypes[index + position] != currentColor && newSpaceTypes[index + position] != null) {
@@ -153,6 +158,7 @@ class _OthelloState extends State<Othello> {
               // On the timer complete, call the set state.
               gamePieces[index + loopPosition] = currentColor == 'black' ? _gameBoardSpace(context, 'black') : _gameBoardSpace(context, 'white');
               newSpaceTypes[index + loopPosition] = currentColor == 'black' ? 'black' : 'white';
+              positionsToFlip.add(index + loopPosition);
               loopPosition += position;
             }
           }
@@ -160,7 +166,12 @@ class _OthelloState extends State<Othello> {
       }
     }
 
-    return [newSpaceTypes, gamePieces];
+    setState(() {
+      _positionsToFlip = positionsToFlip;
+      _renderArray = gamePieces;
+    });
+
+    return newSpaceTypes;
   }
 
   _assignHighlight(List<String> newSpaceTypes, List<Widget> gamePieces, String newCurrentColor) {
@@ -200,7 +211,11 @@ class _OthelloState extends State<Othello> {
       }
     }
 
-    return [newSpaceTypes, gamePieces];
+    setState(() {
+      _renderArray = gamePieces;
+    });
+
+    return newSpaceTypes;
   }
 
   _highlightPress(BuildContext context, int index) {
@@ -217,15 +232,17 @@ class _OthelloState extends State<Othello> {
       }
     }
 
+    var updateGameBoard = List<Widget>.from(gamePieces);
+    setState(() {
+      _gameBoard = updateGameBoard;
+    });
+
     // Check the render queue. If it is not empty, check the timer. Lookup dart timer class, setTimeout.
-    var results = _assignTokens(index, newSpaceTypes, gamePieces);
-    newSpaceTypes = results[0];
-    gamePieces = results[1];
+    newSpaceTypes = _assignTokens(index, newSpaceTypes, gamePieces);
 
     var newCurrentColor = currentColor == 'black' ? 'white' : 'black';
-    results = _assignHighlight(newSpaceTypes, gamePieces, newCurrentColor);
-    newSpaceTypes = results[0];
-    gamePieces = results[1];
+    gamePieces = List<Widget>.from(_renderArray);
+    newSpaceTypes = _assignHighlight(newSpaceTypes, gamePieces, newCurrentColor);
 
     bool noMove = true;
     for (var space in newSpaceTypes) {
@@ -237,9 +254,8 @@ class _OthelloState extends State<Othello> {
 
     if(noMove == true) {
       newCurrentColor = currentColor;
-      results = _assignHighlight(newSpaceTypes, gamePieces, newCurrentColor);
-      newSpaceTypes = results[0];
-      gamePieces = results[1];
+      gamePieces = List<Widget>.from(_renderArray);
+      newSpaceTypes = _assignHighlight(newSpaceTypes, gamePieces, newCurrentColor);
 
       for (var space in newSpaceTypes) {
         if (space == 'highlight') {
@@ -253,15 +269,32 @@ class _OthelloState extends State<Othello> {
         }
       }
     }
+
+    Timer.periodic(Duration(milliseconds: 100), (Timer timer) {
+      if(_positionsToFlip.length > 0) {
+        var pos = _positionsToFlip[0];
+
+        var newGameBoard = List<Widget>.from(_gameBoard);
+        newGameBoard[pos] = _renderArray[pos];
+
+        setState(() {
+          _positionsToFlip = _positionsToFlip.sublist(1);
+          _gameBoard = newGameBoard;
+        });
+      } else {
+        setState(() {
+          _gameBoard = _renderArray;
+        });
+        timer.cancel();
+      }
+    });
     
     if(noMove == true) {
       setState(() {
-        _gameBoard = gamePieces;
         _endGame(context);
       });
     } else {
       setState(() {
-        _gameBoard = gamePieces;
         _spaceTypes = newSpaceTypes;
         currentColor = newCurrentColor;        
       });
